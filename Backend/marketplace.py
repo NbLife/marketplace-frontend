@@ -3,30 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
-from dotenv import load_dotenv
 
 app = FastAPI()
-load_dotenv()
 
-# 🔥 DODAJEMY CORS (zezwalamy na żądania z Twojej strony)
+# ✅ Poprawiona konfiguracja CORS
 origins = [
-    "http://127.0.0.1:8000",
-    "https://red-tree-02e732c0f.4.azurestaticapps.net"  # 🔥 ADRES TWOJEGO FRONTENDU
+    "http://127.0.0.1:5500",  # Lokalny serwer (np. Live Server w VS Code)
+    "http://localhost:8000",  # Backend w trybie lokalnym
+    "https://red-tree-02e732c0f.4.azurestaticapps.net"  # Adres Twojej aplikacji na Azure
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Pozwala na wszystkie metody (GET, POST, DELETE, itd.)
+    allow_headers=["*"],  # Pozwala na wszystkie nagłówki
 )
 
-# 🔧 Połączenie z MongoDB (zmień na swoje)
-COSMOS_DB_URL = os.getenv("COSMOS_DB_URL")
-client = MongoClient(COSMOS_DB_URL)
+client = MongoClient(os.getenv("COSMOS_DB_URL"))  # Pobiera klucz z env
+db = client.marketplace
 
-
+# ✅ Obsługa dodawania produktu
 @app.post("/add_product")
 async def add_product(
     name: str = Form(...),
@@ -38,7 +36,7 @@ async def add_product(
     categories = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports", "Toys", "Others"]
     if category not in categories:
         category = "Others"
-    
+
     image_path = f"images/{image.filename}"
     os.makedirs("images", exist_ok=True)
     with open(image_path, "wb") as img_file:
@@ -54,15 +52,16 @@ async def add_product(
     db.products.insert_one(product)
     return {"message": "Product added", "product": product}
 
+# ✅ Pobieranie produktów
 @app.get("/products")
 def get_products():
     products = list(db.products.find({}, {"_id": 1, "name": 1, "description": 1, "price": 1, "category": 1, "image_url": 1}))
     return [{"id": str(p["_id"]), **p} for p in products]
 
+# ✅ Usuwanie produktu
 @app.delete("/delete_product/{product_id}")
 def delete_product(product_id: str):
     result = db.products.delete_one({"_id": ObjectId(product_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
-
