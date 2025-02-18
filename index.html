@@ -131,6 +131,10 @@
             loadProducts();  // Odśwież listę po usunięciu
         }
 
+        function showLoginForm() {
+            document.getElementById('loginForm').classList.remove('hidden');
+        }
+
         function searchProducts() {
             let searchValue = document.getElementById('search').value.toLowerCase();
             let products = document.querySelectorAll('.product');

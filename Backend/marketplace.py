@@ -13,13 +13,15 @@ origins = [
     "https://red-tree-02e732c0f.4.azurestaticapps.net"  # Adres Twojej aplikacji na Azure
 ]
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Możesz tu dodać dokładne adresy np. "https://twoja-strona.azurestaticapps.net"
     allow_credentials=True,
     allow_methods=["*"],  # Pozwala na wszystkie metody (GET, POST, DELETE, itd.)
     allow_headers=["*"],  # Pozwala na wszystkie nagłówki
 )
+
 
 client = MongoClient(os.getenv("COSMOS_DB_URL"))  # Pobiera klucz z env
 db = client.marketplace
