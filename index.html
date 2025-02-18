@@ -5,71 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: #f4f4f4;
-        }
-        header {
-            background: #007BFF;
-            color: white;
-            padding: 10px;
-            text-align: center;
-        }
-        nav {
-            display: flex;
-            justify-content: center;
-            padding: 10px;
-            background: #ddd;
-        }
-        nav input, nav select {
-            margin: 5px;
-            padding: 5px;
-        }
-        #productsContainer {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin: 20px;
-        }
-        .product {
-            border: 1px solid #ddd;
-            background: white;
-            padding: 15px;
-            margin: 10px;
-            width: 200px;
-            text-align: center;
-            border-radius: 5px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        header { background: #007BFF; color: white; padding: 15px; text-align: center; font-size: 24px; }
+        nav { display: flex; justify-content: center; padding: 10px; background: #ddd; }
+        nav input, nav select { margin: 5px; padding: 8px; }
+        #productsContainer { display: flex; flex-wrap: wrap; justify-content: center; margin: 20px; }
+        .product { border: 1px solid #ddd; background: white; padding: 15px; margin: 10px; width: 200px; text-align: center; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
         .hidden { display: none; }
-        .modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
-        }
-        .modal input, .modal select {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-        }
-        .modal button {
-            width: 100%;
-            background: #007BFF;
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-        }
-        .modal button:hover {
-            background: #0056b3;
-        }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 5px; box-shadow: 0px 0px 10px rgba(0,0,0,0.3); }
+        .modal input, .modal select { width: 100%; padding: 8px; margin: 5px 0; }
+        .modal button { width: 100%; background: #007BFF; color: white; border: none; padding: 10px; cursor: pointer; }
+        .modal button:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -135,33 +81,55 @@
     </div>
 
     <script>
-        function showLoginForm() { document.getElementById('loginForm').classList.remove('hidden'); }
-        function showSignupForm() { document.getElementById('signupForm').classList.remove('hidden'); }
+        const API_URL = "http://127.0.0.1:8000";  // Zmień na URL backendu na serwerze
+
         function showAddProductForm() { document.getElementById('addProductForm').classList.remove('hidden'); }
         function closeForm(id) { document.getElementById(id).classList.add('hidden'); }
 
-        function addProduct() {
-            let name = document.getElementById('productName').value;
-            let description = document.getElementById('productDescription').value;
-            let price = document.getElementById('productPrice').value;
-            let category = document.getElementById('productCategory').value;
-            let container = document.getElementById('productsContainer');
+        async function addProduct() {
+            let formData = new FormData();
+            formData.append("name", document.getElementById('productName').value);
+            formData.append("description", document.getElementById('productDescription').value);
+            formData.append("price", document.getElementById('productPrice').value);
+            formData.append("category", document.getElementById('productCategory').value);
+            formData.append("image", document.getElementById('productImage').files[0]);
 
-            let productDiv = document.createElement('div');
-            productDiv.className = 'product';
-            productDiv.innerHTML = `
-                <h3>${name}</h3>
-                <p>${description}</p>
-                <p>Price: $${price}</p>
-                <p>Category: ${category}</p>
-                <button onclick="deleteProduct(this)">Delete</button>
-            `;
+            let response = await fetch(`${API_URL}/add_product`, {
+                method: "POST",
+                body: formData
+            });
 
-            container.appendChild(productDiv);
+            let data = await response.json();
             closeForm('addProductForm');
+            loadProducts();  // Po dodaniu odśwież listę produktów
         }
 
-        function deleteProduct(button) { button.parentElement.remove(); }
+        async function loadProducts() {
+            let response = await fetch(`${API_URL}/products`);
+            let products = await response.json();
+
+            let container = document.getElementById('productsContainer');
+            container.innerHTML = "";  // Wyczyść listę produktów przed ponownym załadowaniem
+
+            products.forEach(product => {
+                let productDiv = document.createElement('div');
+                productDiv.className = 'product';
+                productDiv.innerHTML = `
+                    <h3>${product.name}</h3>
+                    <p>${product.description}</p>
+                    <p>Price: $${product.price}</p>
+                    <p>Category: ${product.category}</p>
+                    <img src="${API_URL}/${product.image_url}" width="100" height="100">
+                    <button onclick="deleteProduct('${product.id}')">Delete</button>
+                `;
+                container.appendChild(productDiv);
+            });
+        }
+
+        async function deleteProduct(productId) {
+            await fetch(`${API_URL}/delete_product/${productId}`, { method: "DELETE" });
+            loadProducts();  // Odśwież listę po usunięciu
+        }
 
         function searchProducts() {
             let searchValue = document.getElementById('search').value.toLowerCase();
@@ -180,6 +148,8 @@
                 product.style.display = (selectedCategory === 'all' || category === selectedCategory) ? 'block' : 'none';
             });
         }
+
+        window.onload = loadProducts;
     </script>
 </body>
 </html>
