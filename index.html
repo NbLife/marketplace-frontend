@@ -5,32 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
-        header {
-            background-color: #4CAF50;
-            padding: 15px;
-            color: white;
-        }
-        nav {
-            margin: 20px;
-        }
-        #productsContainer {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .product {
-            border: 1px solid #ccc;
-            margin: 10px;
-            padding: 10px;
-            width: 200px;
-            text-align: center;
-        }
+        body { font-family: Arial, sans-serif; }
+        #loginForm, #signupForm, #addProductForm { display: none; border: 1px solid #ccc; padding: 20px; width: 300px; background: #f9f9f9; position: absolute; top: 50px; left: 50px; }
+        .product { border: 1px solid #ddd; padding: 10px; margin: 10px; display: inline-block; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -59,7 +37,23 @@
     
     <div id="productsContainer"></div>
     
-    <div id="addProductForm" style="display: none;">
+    <div id="loginForm" class="hidden">
+        <h2>Login</h2>
+        <input type="text" id="loginUsername" placeholder="Username">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="closeForm('loginForm')">Close</button>
+    </div>
+    
+    <div id="signupForm" class="hidden">
+        <h2>Sign Up</h2>
+        <input type="text" id="signupUsername" placeholder="Username">
+        <input type="password" id="signupPassword" placeholder="Password">
+        <button onclick="signup()">Sign Up</button>
+        <button onclick="closeForm('signupForm')">Close</button>
+    </div>
+    
+    <div id="addProductForm" class="hidden">
         <h2>Add Product</h2>
         <input type="text" id="productName" placeholder="Product Name">
         <input type="text" id="productDescription" placeholder="Description">
@@ -76,40 +70,46 @@
         </select>
         <input type="file" id="productImage">
         <button onclick="addProduct()">Submit</button>
+        <button onclick="closeForm('addProductForm')">Close</button>
     </div>
     
     <script>
-        function showLoginForm() {
-            alert("Show Login Form");
-        }
-
-        function showSignupForm() {
-            alert("Show Signup Form");
-        }
-
-        function showAddProductForm() {
-            document.getElementById("addProductForm").style.display = "block";
-        }
-
+        function showLoginForm() { document.getElementById('loginForm').style.display = 'block'; }
+        function showSignupForm() { document.getElementById('signupForm').style.display = 'block'; }
+        function showAddProductForm() { document.getElementById('addProductForm').style.display = 'block'; }
+        function closeForm(id) { document.getElementById(id).style.display = 'none'; }
+        
         function addProduct() {
-            let name = document.getElementById("productName").value;
-            let description = document.getElementById("productDescription").value;
-            let price = document.getElementById("productPrice").value;
-            let category = document.getElementById("productCategory").value;
-            let image = document.getElementById("productImage").files[0];
-            
-            let reader = new FileReader();
-            reader.onloadend = function() {
-                let productHTML = `<div class='product'>
-                    <img src="${reader.result}" width="100" height="100">
-                    <h3>${name}</h3>
-                    <p>${description}</p>
-                    <p>Price: $${price}</p>
-                    <p>Category: ${category}</p>
-                </div>`;
-                document.getElementById("productsContainer").innerHTML += productHTML;
-            }
-            if (image) reader.readAsDataURL(image);
+            let name = document.getElementById('productName').value;
+            let description = document.getElementById('productDescription').value;
+            let price = document.getElementById('productPrice').value;
+            let category = document.getElementById('productCategory').value;
+            let container = document.getElementById('productsContainer');
+            let productDiv = document.createElement('div');
+            productDiv.className = 'product';
+            productDiv.innerHTML = `<h3>${name}</h3><p>${description}</p><p>Price: $${price}</p><p>Category: ${category}</p><button onclick="deleteProduct(this)">Delete</button>`;
+            container.appendChild(productDiv);
+            closeForm('addProductForm');
+        }
+        
+        function deleteProduct(button) { button.parentElement.remove(); }
+        
+        function searchProducts() {
+            let searchValue = document.getElementById('search').value.toLowerCase();
+            let products = document.querySelectorAll('.product');
+            products.forEach(product => {
+                let name = product.querySelector('h3').innerText.toLowerCase();
+                product.style.display = name.includes(searchValue) ? 'block' : 'none';
+            });
+        }
+        
+        function filterByCategory() {
+            let selectedCategory = document.getElementById('categoryFilter').value;
+            let products = document.querySelectorAll('.product');
+            products.forEach(product => {
+                let category = product.querySelector('p:nth-child(4)').innerText.split(': ')[1];
+                product.style.display = (selectedCategory === 'all' || category === selectedCategory) ? 'block' : 'none';
+            });
         }
     </script>
 </body>
