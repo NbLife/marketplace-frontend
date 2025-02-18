@@ -1,111 +1,105 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="title">Marketplace</title>
+    <title>Marketplace</title>
     <style>
-        * {
-            padding: 0;
-            margin: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        header {
-            padding: 10px;
-            background: #007bff;
-            color: white;
-        }
-        input, button {
-            margin-top: 10px;
-            padding: 5px;
-        }
-        .product {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 10px;
-            display: inline-block;
-        }
-        img {
-            max-width: 100px;
-        }
-        .menu {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 10px;
-            background: #007bff;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-        }
-        .menu a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-            margin: 0 10px;
-        }
-        .menu a:hover {
-            text-decoration: underline;
-        }
-        .dropdown {
-            display: none;
-            position: absolute;
-            right: 10px;
-            top: 50px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 10px;
-            width: 250px;
-        }
-        .dropdown.show {
-            display: block;
-        }
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: auto; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <header>
-        <h1 id="header-title">Marketplace</h1>
-        <div class="menu">
-            <a href="#" onclick="showLogin()" id="login">Log in</a> | 
-            <a href="#" onclick="showSignup()" id="signup">Sign up</a>
+    <div class="container">
+        <h1>Marketplace</h1>
+        
+        <!-- Formularz rejestracji i logowania -->
+        <button onclick="showRegisterForm()">Register</button>
+        <button onclick="showLoginForm()">Login</button>
+        <div id="auth-form" class="hidden">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="registerUser()">Register</button>
+            <button onclick="loginUser()">Login</button>
         </div>
-        <input type="text" id="search" placeholder="Szukaj produktów...">
-        <button onclick="searchProducts()" id="search-btn">Szukaj</button>
-    </header>
-    
-    <main id="products"></main>
-    
-    <button id="add-product" onclick="addProduct()">Dodaj Produkt</button>
+        
+        <!-- Formularz dodawania produktu -->
+        <button onclick="showAddProductForm()">Add Product</button>
+        <div id="add-product-form" class="hidden">
+            <input type="text" id="product-name" placeholder="Product Name">
+            <input type="text" id="product-description" placeholder="Description">
+            <input type="number" id="product-price" placeholder="Price">
+            <input type="file" id="product-image">
+            <select id="product-category">
+                <option value="Others">Others</option>
+            </select>
+            <button onclick="addProduct()">Submit</button>
+        </div>
+        
+        <!-- Wyszukiwarka produktów -->
+        <input type="text" id="search-query" placeholder="Search products">
+        <button onclick="searchProducts()">Search</button>
+        
+        <!-- Kategorie -->
+        <h2>Categories</h2>
+        <div id="categories"></div>
+        
+        <!-- Lista produktów -->
+        <h2>Products</h2>
+        <div id="products"></div>
+    </div>
     
     <script>
-        function showLogin() {
-            alert("Funkcja logowania jeszcze nie jest zaimplementowana.");
+        async function fetchCategories() {
+            const categories = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports", "Toys", "Others"];
+            const select = document.getElementById("product-category");
+            const container = document.getElementById("categories");
+            container.innerHTML = '';
+            categories.forEach(category => {
+                select.innerHTML += `<option value="${category}">${category}</option>`;
+                container.innerHTML += `<button onclick="filterByCategory('${category}')">${category}</button>`;
+            });
         }
-
-        function showSignup() {
-            alert("Funkcja rejestracji jeszcze nie jest zaimplementowana.");
+        
+        async function addProduct() {
+            const formData = new FormData();
+            formData.append("name", document.getElementById("product-name").value);
+            formData.append("description", document.getElementById("product-description").value);
+            formData.append("price", document.getElementById("product-price").value);
+            formData.append("category", document.getElementById("product-category").value);
+            formData.append("image", document.getElementById("product-image").files[0]);
+            await fetch("/add_product", { method: "POST", body: formData });
+            loadProducts();
         }
-
-        function searchProducts() {
-            const searchTerm = document.getElementById("search").value;
-            alert(`Szukam produktów: ${searchTerm}`);
+        
+        async function loadProducts() {
+            const res = await fetch("/products");
+            const products = await res.json();
+            document.getElementById("products").innerHTML = products.map(p => 
+                `<div>
+                    <h3>${p.name}</h3>
+                    <p>${p.description}</p>
+                    <p>${p.price}$</p>
+                    <img src="${p.image_url}" width="100">
+                    <button onclick="deleteProduct('${p.id}')">Delete</button>
+                </div>`).join('');
         }
-
-        function addProduct() {
-            const productName = prompt("Podaj nazwę produktu:");
-            if (productName) {
-                const productElement = document.createElement("div");
-                productElement.classList.add("product");
-                productElement.innerHTML = `<p>${productName}</p>`;
-                document.getElementById("products").appendChild(productElement);
-            }
+        
+        async function deleteProduct(id) {
+            await fetch(`/delete_product/${id}`, { method: "DELETE" });
+            loadProducts();
         }
+        
+        function showAddProductForm() { document.getElementById("add-product-form").classList.toggle("hidden"); }
+        function showRegisterForm() { document.getElementById("auth-form").classList.toggle("hidden"); }
+        async function registerUser() { /* Implementacja */ }
+        async function loginUser() { /* Implementacja */ }
+        async function searchProducts() { /* Implementacja */ }
+        async function filterByCategory(category) { /* Implementacja */ }
+        
+        fetchCategories();
+        loadProducts();
     </script>
 </body>
 </html>
