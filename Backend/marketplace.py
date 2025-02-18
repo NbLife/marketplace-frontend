@@ -3,12 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
-import shutil
 
 app = FastAPI()
 
-# 🔹 Obsługa CORS (żeby frontend działał poprawnie)
-origins = ["*"]
+# 🔥 DODAJEMY CORS (zezwalamy na żądania z Twojej strony)
+origins = [
+    "http://127.0.0.1:8000",
+    "https://red-tree-02e732c0f.4.azurestaticapps.net"  # 🔥 ADRES TWOJEGO FRONTENDU
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -17,16 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔹 Połączenie z MongoDB (Azure CosmosDB)
-COSMOS_DB_URL = os.getenv("COSMOS_DB_URL", "mongodb://your_connection_string")
-client = MongoClient(COSMOS_DB_URL)
+# 🔧 Połączenie z MongoDB (zmień na swoje)
+client = MongoClient("mongodb://your_connection_string")
 db = client.marketplace
 
-# 🔹 Ścieżka do folderu na obrazki
-UPLOAD_FOLDER = "images"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# 🔹 API: Dodaj produkt
 @app.post("/add_product")
 async def add_product(
     name: str = Form(...),
@@ -35,17 +32,15 @@ async def add_product(
     category: str = Form(...),
     image: UploadFile = File(...)
 ):
-    # Lista kategorii
     categories = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports", "Toys", "Others"]
     if category not in categories:
         category = "Others"
-
-    # Zapis obrazka na serwerze
-    image_path = os.path.join(UPLOAD_FOLDER, image.filename)
+    
+    image_path = f"images/{image.filename}"
+    os.makedirs("images", exist_ok=True)
     with open(image_path, "wb") as img_file:
-        shutil.copyfileobj(image.file, img_file)
+        img_file.write(image.file.read())
 
-    # Zapis produktu w bazie danych
     product = {
         "name": name,
         "description": description,
@@ -53,21 +48,18 @@ async def add_product(
         "category": category,
         "image_url": image_path
     }
-    result = db.products.insert_one(product)
-    product["_id"] = str(result.inserted_id)  # Konwersja ObjectId na string
-    
+    db.products.insert_one(product)
     return {"message": "Product added", "product": product}
 
-# 🔹 API: Pobierz wszystkie produkty
 @app.get("/products")
 def get_products():
     products = list(db.products.find({}, {"_id": 1, "name": 1, "description": 1, "price": 1, "category": 1, "image_url": 1}))
     return [{"id": str(p["_id"]), **p} for p in products]
 
-# 🔹 API: Usuń produkt
 @app.delete("/delete_product/{product_id}")
 def delete_product(product_id: str):
     result = db.products.delete_one({"_id": ObjectId(product_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
+
