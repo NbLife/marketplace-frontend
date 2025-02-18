@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+from dotenv import load_dotenv
 
 app = FastAPI()
+load_dotenv()
 
 # 🔥 DODAJEMY CORS (zezwalamy na żądania z Twojej strony)
 origins = [
@@ -21,8 +23,9 @@ app.add_middleware(
 )
 
 # 🔧 Połączenie z MongoDB (zmień na swoje)
-client = MongoClient("mongodb://your_connection_string")
-db = client.marketplace
+COSMOS_DB_URL = os.getenv("COSMOS_DB_URL")
+client = MongoClient(COSMOS_DB_URL)
+
 
 @app.post("/add_product")
 async def add_product(
