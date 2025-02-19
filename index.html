@@ -7,124 +7,138 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
             margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-        ul {
-            list-style-type: none;
             padding: 0;
+            background: #f4f4f4;
         }
-        li {
-            background: white;
-            margin: 10px;
-            padding: 15px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 400px;
-            margin: 10px auto;
-        }
-        button {
-            background: red;
+        header {
+            background: #007BFF;
             color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 3px;
-        }
-        input {
             padding: 10px;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background: #ddd;
+        }
+        nav input, nav select {
             margin: 5px;
+            padding: 5px;
+        }
+        #productsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .product {
+            border: 1px solid #ddd;
+            background: white;
+            padding: 15px;
+            margin: 10px;
+            width: 200px;
+            text-align: center;
             border-radius: 5px;
-            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
         }
-        .form-container {
-            margin-top: 20px;
+        .hidden { display: none; }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
         }
-        .add-button {
-            background: green;
+        .modal input, .modal select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .modal button {
+            width: 100%;
+            background: #007BFF;
             color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
             border: none;
+            padding: 10px;
             cursor: pointer;
+        }
+        .modal button:hover {
+            background: #0056b3;
         }
     </style>
 </head>
 <body>
-    <h1>Marketplace</h1>
-    <ul id="product-list"></ul>
+    <header>
+        <h1>Marketplace</h1>
+        <button onclick="showLoginForm()">Login</button>
+        <button onclick="showSignupForm()">Sign Up</button>
+    </header>
+    
+    <nav>
+        <input type="text" id="search" placeholder="Search products" onkeyup="searchProducts()">
+        <select id="categoryFilter" onchange="filterByCategory()">
+            <option value="all">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Home">Home</option>
+            <option value="Books">Books</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Sports">Sports</option>
+            <option value="Toys">Toys</option>
+            <option value="Others">Others</option>
+        </select>
+    </nav>
 
-    <div class="form-container">
-        <input type="text" id="product-name" placeholder="Product Name">
-        <input type="number" id="product-price" placeholder="Product Price">
-        <button class="add-button" onclick="addProduct()">Add Product</button>
+    <button onclick="showAddProductForm()">Add Product</button>
+    
+    <div id="productsContainer"></div>
+    
+    <div id="loginForm" class="modal hidden">
+        <h2>Login</h2>
+        <input type="text" id="loginUsername" placeholder="Username">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="closeForm('loginForm')">Close</button>
+    </div>
+
+    <div id="signupForm" class="modal hidden">
+        <h2>Sign Up</h2>
+        <input type="text" id="signupUsername" placeholder="Username">
+        <input type="password" id="signupPassword" placeholder="Password">
+        <button onclick="signup()">Sign Up</button>
+        <button onclick="closeForm('signupForm')">Close</button>
+    </div>
+
+    <div id="addProductForm" class="modal hidden">
+        <h2>Add Product</h2>
+        <input type="text" id="productName" placeholder="Product Name">
+        <input type="text" id="productDescription" placeholder="Description">
+        <input type="number" id="productPrice" placeholder="Price">
+        <select id="productCategory">
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Home">Home</option>
+            <option value="Books">Books</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Sports">Sports</option>
+            <option value="Toys">Toys</option>
+            <option value="Others">Others</option>
+        </select>
+        <input type="file" id="productImage">
+        <button onclick="addProduct()">Submit</button>
+        <button onclick="closeForm('addProductForm')">Close</button>
     </div>
 
     <script>
-        const apiBase = "https://my-marketplace-api.azurewebsites.net";
-
-        async function loadProducts() {
-            try {
-                let response = await fetch(`${apiBase}/products`);
-                let products = await response.json();
-                let productList = document.getElementById("product-list");
-                productList.innerHTML = "";
-                products.forEach(p => {
-                    let li = document.createElement("li");
-                    li.textContent = `${p.name} - $${p.price}`;
-                    let delBtn = document.createElement("button");
-                    delBtn.textContent = "Delete";
-                    delBtn.onclick = () => deleteProduct(p.id);
-                    li.appendChild(delBtn);
-                    productList.appendChild(li);
-                });
-            } catch (error) {
-                console.error("Error loading products:", error);
-            }
-        }
-
-        async function addProduct() {
-            let name = document.getElementById("product-name").value;
-            let price = document.getElementById("product-price").value;
-
-            if (!name || !price) {
-                alert("Please enter product name and price.");
-                return;
-            }
-
-            let response = await fetch(`${apiBase}/products`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, price })
-            });
-
-            if (response.ok) {
-                loadProducts();
-            } else {
-                alert("Failed to add product.");
-            }
-        }
-
-        async function deleteProduct(id) {
-            let response = await fetch(`${apiBase}/products/${id}`, {
-                method: "DELETE"
-            });
-
-            if (response.ok) {
-                loadProducts();
-            } else {
-                alert("Failed to delete product.");
-            }
-        }
-
-        window.onload = loadProducts;
+        function showLoginForm() { document.getElementById('loginForm').classList.remove('hidden'); }
+        function showSignupForm() { document.getElementById('signupForm').classList.remove('hidden'); }
+        function showAddProductForm() { document.getElementById('addProductForm').classList.remove('hidden'); }
+        function closeForm(id) { document.getElementById(id).classList.add('hidden'); }
     </script>
 </body>
 </html>

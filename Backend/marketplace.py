@@ -1,45 +1,59 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pymongo import MongoClient
+from bson import ObjectId
+import os
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Zezwól na żądania CORS tylko z Twojej strony frontendowej
-CORS(app, origins=["https://red-tree-02e732c0f.4.azurestaticapps.net"])
+# Dodanie obsługi CORS
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Przykładowa baza produktów
-products = [
-    {"id": 1, "name": "Laptop", "price": 3000, "image": "laptop.jpg"},
-    {"id": 2, "name": "Telefon", "price": 2000, "image": "phone.jpg"}
-]
+client = MongoClient("mongodb://your_connection_string")
+db = client.marketplace
 
-@app.route('/')
-def home():
-    return "Marketplace API is running!"
-
-@app.route('/products', methods=['GET'])
-def get_products():
-    return jsonify(products), 200
-
-@app.route('/products', methods=['POST'])
-def add_product():
-    data = request.get_json()
-    if not data or "name" not in data or "price" not in data:
-        return jsonify({"error": "Invalid request. 'name' and 'price' are required."}), 400
+@app.post("/add_product")
+async def add_product(
+    name: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    category: str = Form(...),
+    image: UploadFile = File(...)
+):
+    categories = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports", "Toys", "Others"]
+    if category not in categories:
+        category = "Others"
     
-    new_product = {
-        "id": len(products) + 1,
-        "name": data["name"],
-        "price": data["price"],
-        "image": data.get("image", "default.jpg")
+    image_path = f"images/{image.filename}"
+    os.makedirs("images", exist_ok=True)
+    with open(image_path, "wb") as img_file:
+        img_file.write(image.file.read())
+    
+    product = {
+        "name": name,
+        "description": description,
+        "price": price,
+        "category": category,
+        "image_url": image_path
     }
-    products.append(new_product)
-    return jsonify(new_product), 201
+    db.products.insert_one(product)
+    return {"message": "Product added", "product": product}
 
-@app.route('/products/<int:product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    global products
-    products = [p for p in products if p["id"] != product_id]
-    return jsonify({"message": "Product deleted"}), 200
+@app.get("/products")
+def get_products():
+    products = list(db.products.find({}, {"_id": 1, "name": 1, "description": 1, "price": 1, "category": 1, "image_url": 1}))
+    return [{"id": str(p["_id"]), **p} for p in products]
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+@app.delete("/delete_product/{product_id}")
+def delete_product(product_id: str):
+    result = db.products.delete_one({"_id": ObjectId(product_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted"}
