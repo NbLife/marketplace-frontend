@@ -6,11 +6,10 @@ import os
 
 app = FastAPI()
 
-# Obsługa CORS
+
 origins = [
     "https://red-tree-02e732c0f.4.azurestaticapps.net",  # Twój frontend na Azure
-    "http://127.0.0.1:5500",  # Testowanie lokalne
-    "http://localhost:8000"  # Testowanie lokalne API
+    "http://localhost:8000"  # Twój backend lokalnie
 ]
 
 app.add_middleware(
@@ -20,6 +19,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Pobieranie connection string z GitHub Secrets
 MONGO_URL = os.getenv("COSMOS_DB_URL")
