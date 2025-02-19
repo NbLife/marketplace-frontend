@@ -11,7 +11,7 @@ origins = [
     "http://localhost:5500",  # Live Server w VS Code
     "http://127.0.0.1:5500",
     "http://localhost:8000",
-    "*"  # Dla testów, można usunąć po wdrożeniu
+    "https://red-tree-02e732c0f.4.azurestaticapps.net"  # Dla testów, można usunąć po wdrożeniu
 ]
 
 app.add_middleware(
