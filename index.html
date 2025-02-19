@@ -135,10 +135,47 @@
     </div>
 
     <script>
-        function showLoginForm() { document.getElementById('loginForm').classList.remove('hidden'); }
-        function showSignupForm() { document.getElementById('signupForm').classList.remove('hidden'); }
-        function showAddProductForm() { document.getElementById('addProductForm').classList.remove('hidden'); }
-        function closeForm(id) { document.getElementById(id).classList.add('hidden'); }
+        async function login() {
+            alert("Funkcja logowania jeszcze nie jest zaimplementowana.");
+        }
+    
+        async function signup() {
+            alert("Funkcja rejestracji jeszcze nie jest zaimplementowana.");
+        }
+    
+        async function addProduct() {
+            const name = document.getElementById('productName').value;
+            const description = document.getElementById('productDescription').value;
+            const price = document.getElementById('productPrice').value;
+            const category = document.getElementById('productCategory').value;
+            const image = document.getElementById('productImage').files[0];
+    
+            if (!name || !description || !price || !image) {
+                alert("Wszystkie pola są wymagane!");
+                return;
+            }
+    
+            let formData = new FormData();
+            formData.append("name", name);
+            formData.append("description", description);
+            formData.append("price", price);
+            formData.append("category", category);
+            formData.append("image", image);
+    
+            try {
+                let response = await fetch("http://localhost:8000/add_product", {
+                    method: "POST",
+                    body: formData
+                });
+    
+                let result = await response.json();
+                alert(result.message);
+                closeForm('addProductForm');
+            } catch (error) {
+                console.error("Błąd dodawania produktu:", error);
+            }
+        }
     </script>
+    
 </body>
 </html>
