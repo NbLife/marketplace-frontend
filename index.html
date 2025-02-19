@@ -5,10 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        #loginForm, #signupForm, #addProductForm { display: none; border: 1px solid #ccc; padding: 20px; width: 300px; background: #f9f9f9; position: absolute; top: 50px; left: 50px; }
-        .product { border: 1px solid #ddd; padding: 10px; margin: 10px; display: inline-block; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        header {
+            background: #007BFF;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background: #ddd;
+        }
+        nav input, nav select {
+            margin: 5px;
+            padding: 5px;
+        }
+        #productsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .product {
+            border: 1px solid #ddd;
+            background: white;
+            padding: 15px;
+            margin: 10px;
+            width: 200px;
+            text-align: center;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
         .hidden { display: none; }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+        }
+        .modal input, .modal select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .modal button {
+            width: 100%;
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .modal button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -20,90 +81,64 @@
     
     <nav>
         <input type="text" id="search" placeholder="Search products" onkeyup="searchProducts()">
+        <select id="categoryFilter" onchange="filterByCategory()">
+            <option value="all">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Home">Home</option>
+            <option value="Books">Books</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Sports">Sports</option>
+            <option value="Toys">Toys</option>
+            <option value="Others">Others</option>
+        </select>
     </nav>
-    
+
     <button onclick="showAddProductForm()">Add Product</button>
     
     <div id="productsContainer"></div>
     
-    <div id="loginForm" class="hidden">
+    <div id="loginForm" class="modal hidden">
         <h2>Login</h2>
         <input type="text" id="loginUsername" placeholder="Username">
         <input type="password" id="loginPassword" placeholder="Password">
         <button onclick="login()">Login</button>
         <button onclick="closeForm('loginForm')">Close</button>
     </div>
-    
-    <div id="signupForm" class="hidden">
+
+    <div id="signupForm" class="modal hidden">
         <h2>Sign Up</h2>
         <input type="text" id="signupUsername" placeholder="Username">
         <input type="password" id="signupPassword" placeholder="Password">
         <button onclick="signup()">Sign Up</button>
         <button onclick="closeForm('signupForm')">Close</button>
     </div>
-    
-    <div id="addProductForm" class="hidden">
+
+    <div id="addProductForm" class="modal hidden">
         <h2>Add Product</h2>
         <input type="text" id="productName" placeholder="Product Name">
         <input type="text" id="productDescription" placeholder="Description">
         <input type="number" id="productPrice" placeholder="Price">
+        <select id="productCategory">
+            <option value="Electronics">Electronics</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Home">Home</option>
+            <option value="Books">Books</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Sports">Sports</option>
+            <option value="Toys">Toys</option>
+            <option value="Others">Others</option>
+        </select>
+        <input type="file" id="productImage">
         <button onclick="addProduct()">Submit</button>
         <button onclick="closeForm('addProductForm')">Close</button>
     </div>
-    
-    <script>
-        const API_URL = "https://your-backend.azurewebsites.net";
 
+    <script>
         function showLoginForm() { document.getElementById('loginForm').classList.remove('hidden'); }
         function showSignupForm() { document.getElementById('signupForm').classList.remove('hidden'); }
         function showAddProductForm() { document.getElementById('addProductForm').classList.remove('hidden'); }
         function closeForm(id) { document.getElementById(id).classList.add('hidden'); }
-
-        async function signup() {
-            const username = document.getElementById("signupUsername").value;
-            const password = document.getElementById("signupPassword").value;
-
-            try {
-                let response = await fetch(`${API_URL}/signup`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: `username=${username}&password=${password}`
-                });
-
-                if (!response.ok) {
-                    let data = await response.json();
-                    alert(`Error: ${data.detail}`);
-                } else {
-                    alert("Sign up successful!");
-                    closeForm("signupForm");
-                }
-            } catch (error) {
-                console.error("Sign up failed:", error);
-            }
-        }
-
-        async function addProduct() {
-            const name = document.getElementById("productName").value;
-            const description = document.getElementById("productDescription").value;
-            const price = document.getElementById("productPrice").value;
-
-            try {
-                let response = await fetch(`${API_URL}/add_product`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: `name=${name}&description=${description}&price=${price}`
-                });
-
-                if (response.ok) {
-                    alert("Product added!");
-                    closeForm("addProductForm");
-                } else {
-                    alert("Failed to add product.");
-                }
-            } catch (error) {
-                console.error("Add product error:", error);
-            }
-        }
     </script>
 </body>
 </html>
