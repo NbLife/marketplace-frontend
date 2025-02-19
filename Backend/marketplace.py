@@ -3,14 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+import os  # Pobieranie zmiennych środowiskowych
 
 app = FastAPI()
 
 # Obsługa CORS
 origins = [
-    "http://127.0.0.1:5500", 
-    "http://localhost:8000",  
-    "https://red-tree-02e732c0f.4.azurestaticapps.net"  
+    "http://127.0.0.1:5500",
+    "http://localhost:8000",
+    "https://red-tree-02e732c0f.4.azurestaticapps.net"
 ]
 
 app.add_middleware(
@@ -21,7 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = MongoClient("mongodb://your_connection_string")
+# Pobieranie connection string z GitHub Secrets
+MONGO_URL = os.getenv("COSMOS_DB_URL")
+if not MONGO_URL:
+    raise Exception("Błąd: Zmienna COSMOS_DB_URL nie jest ustawiona!")
+
+client = MongoClient(MONGO_URL)
 db = client.marketplace
 
 @app.post("/add_product")
