@@ -1,45 +1,93 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pymongo import MongoClient
+from bson import ObjectId
+import os
+from fastapi import FastAPI
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Zezwól na żądania CORS tylko z Twojej strony frontendowej
-CORS(app, origins=["https://red-tree-02e732c0f.4.azurestaticapps.net"])
 
-# Przykładowa baza produktów
-products = [
-    {"id": 1, "name": "Laptop", "price": 3000, "image": "laptop.jpg"},
-    {"id": 2, "name": "Telefon", "price": 2000, "image": "phone.jpg"}
+origins = [
+    "https://red-tree-02e732c0f.4.azurestaticapps.net",  # Twój frontend na Azure
+    "http://localhost:8000"  # Twój backend lokalnie
 ]
 
-@app.route('/')
-def home():
-    return "Marketplace API is running!"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+import os
+from pymongo import MongoClient
 
-@app.route('/products', methods=['GET'])
-def get_products():
-    return jsonify(products), 200
+MONGO_URL = os.getenv("COSMOS_DB_URL")
 
-@app.route('/products', methods=['POST'])
-def add_product():
-    data = request.get_json()
-    if not data or "name" not in data or "price" not in data:
-        return jsonify({"error": "Invalid request. 'name' and 'price' are required."}), 400
-    
-    new_product = {
-        "id": len(products) + 1,
-        "name": data["name"],
-        "price": data["price"],
-        "image": data.get("image", "default.jpg")
+print(f"🔗 Próba połączenia z MongoDB: {MONGO_URL}")
+
+try:
+    client = MongoClient(MONGO_URL)
+    db = client.marketplace
+    db.command("ping")
+    print("✅ Połączenie z Cosmos DB działa!")
+except Exception as e:
+    print(f"❌ Błąd połączenia z Cosmos DB: {e}")
+
+
+# Pobieranie connection string z GitHub Secrets
+MONGO_URL = os.getenv("COSMOS_DB_URL")
+if not MONGO_URL:
+    raise Exception("❌ Błąd: Zmienna COSMOS_DB_URL nie jest ustawiona!")
+
+# Sprawdzenie połączenia do Cosmos DB
+try:
+    print(f"🔗 Connecting to MongoDB: {MONGO_URL}")
+    client = MongoClient(MONGO_URL)
+    db = client.marketplace
+    db.command("ping")  # Sprawdzenie, czy baza działa
+    print("✅ Połączenie z Cosmos DB nawiązane!")
+except Exception as e:
+    print(f"❌ Błąd połączenia z Cosmos DB: {e}")
+    raise Exception("Nie można połączyć się z Cosmos DB!")
+
+@app.post("/add_product")
+async def add_product(
+    name: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    category: str = Form(...),
+    image: UploadFile = File(...)
+):
+    categories = ["Electronics", "Clothing", "Home", "Books", "Beauty", "Sports", "Toys", "Others"]
+    if category not in categories:
+        category = "Others"
+
+    # Zapis obrazu lokalnie (lub do chmury, np. Azure Blob Storage)
+    image_path = f"images/{image.filename}"
+    os.makedirs("images", exist_ok=True)
+    with open(image_path, "wb") as img_file:
+        img_file.write(image.file.read())
+
+    product = {
+        "name": name,
+        "description": description,
+        "price": price,
+        "category": category,
+        "image_url": image_path
     }
-    products.append(new_product)
-    return jsonify(new_product), 201
+    result = db.products.insert_one(product)
+    return {"message": "Product added", "id": str(result.inserted_id)}
 
-@app.route('/products/<int:product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    global products
-    products = [p for p in products if p["id"] != product_id]
-    return jsonify({"message": "Product deleted"}), 200
+@app.get("/products")
+def get_products():
+    products = list(db.products.find({}, {"_id": 1, "name": 1, "description": 1, "price": 1, "category": 1, "image_url": 1}))
+    return [{"id": str(p["_id"]), **p} for p in products]
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+@app.delete("/delete_product/{product_id}")
+def delete_product(product_id: str):
+    result = db.products.delete_one({"_id": ObjectId(product_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="❌ Product not found")
+    return {"message": "✅ Product deleted"}
