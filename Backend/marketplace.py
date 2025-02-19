@@ -1,13 +1,19 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+import os
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
-import os
 
 app = FastAPI()
 
-# Dodanie obsługi CORS
-origins = ["*"]
+# Obsługa CORS - umożliwia komunikację między frontendem a backendem
+origins = [
+    "http://localhost:5500",  # Live Server w VS Code
+    "http://127.0.0.1:5500",
+    "http://localhost:8000",
+    "*"  # Dla testów, można usunąć po wdrożeniu
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -16,8 +22,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = MongoClient("mongodb://your_connection_string")
+# Pobieranie adresu MongoDB z GitHub Actions lub zmiennych środowiskowych
+MONGO_URL = os.getenv("COSMOS_DB_URL", "mongodb://localhost:27017")  # Domyślna lokalna baza danych dla testów
+client = MongoClient(MONGO_URL)
 db = client.marketplace
+
+# Katalog do przechowywania obrazów
+UPLOAD_FOLDER = "static/images"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.post("/add_product")
 async def add_product(
@@ -31,8 +43,7 @@ async def add_product(
     if category not in categories:
         category = "Others"
     
-    image_path = f"images/{image.filename}"
-    os.makedirs("images", exist_ok=True)
+    image_path = f"{UPLOAD_FOLDER}/{image.filename}"
     with open(image_path, "wb") as img_file:
         img_file.write(image.file.read())
     
@@ -41,10 +52,10 @@ async def add_product(
         "description": description,
         "price": price,
         "category": category,
-        "image_url": image_path
+        "image_url": f"/{image_path}"  # Ścieżka względna
     }
-    db.products.insert_one(product)
-    return {"message": "Product added", "product": product}
+    inserted = db.products.insert_one(product)
+    return {"message": "Product added", "id": str(inserted.inserted_id), "product": product}
 
 @app.get("/products")
 def get_products():
@@ -57,3 +68,7 @@ def delete_product(product_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
