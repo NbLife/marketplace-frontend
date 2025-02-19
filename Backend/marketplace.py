@@ -3,15 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
-import os  # Pobieranie zmiennych środowiskowych
 
 app = FastAPI()
 
 # Obsługa CORS
 origins = [
-    "http://127.0.0.1:5500",
-    "http://localhost:8000",
-    "https://red-tree-02e732c0f.4.azurestaticapps.net"
+    "https://red-tree-02e732c0f.4.azurestaticapps.net",  # Twój frontend na Azure
+    "http://127.0.0.1:5500",  # Testowanie lokalne
+    "http://localhost:8000"  # Testowanie lokalne API
 ]
 
 app.add_middleware(
@@ -25,10 +24,18 @@ app.add_middleware(
 # Pobieranie connection string z GitHub Secrets
 MONGO_URL = os.getenv("COSMOS_DB_URL")
 if not MONGO_URL:
-    raise Exception("Błąd: Zmienna COSMOS_DB_URL nie jest ustawiona!")
+    raise Exception("❌ Błąd: Zmienna COSMOS_DB_URL nie jest ustawiona!")
 
-client = MongoClient(MONGO_URL)
-db = client.marketplace
+# Sprawdzenie połączenia do Cosmos DB
+try:
+    print(f"🔗 Connecting to MongoDB: {MONGO_URL}")
+    client = MongoClient(MONGO_URL)
+    db = client.marketplace
+    db.command("ping")  # Sprawdzenie, czy baza działa
+    print("✅ Połączenie z Cosmos DB nawiązane!")
+except Exception as e:
+    print(f"❌ Błąd połączenia z Cosmos DB: {e}")
+    raise Exception("Nie można połączyć się z Cosmos DB!")
 
 @app.post("/add_product")
 async def add_product(
@@ -42,6 +49,7 @@ async def add_product(
     if category not in categories:
         category = "Others"
 
+    # Zapis obrazu lokalnie (lub do chmury, np. Azure Blob Storage)
     image_path = f"images/{image.filename}"
     os.makedirs("images", exist_ok=True)
     with open(image_path, "wb") as img_file:
@@ -54,8 +62,8 @@ async def add_product(
         "category": category,
         "image_url": image_path
     }
-    db.products.insert_one(product)
-    return {"message": "Product added", "product": product}
+    result = db.products.insert_one(product)
+    return {"message": "Product added", "id": str(result.inserted_id)}
 
 @app.get("/products")
 def get_products():
@@ -66,5 +74,5 @@ def get_products():
 def delete_product(product_id: str):
     result = db.products.delete_one({"_id": ObjectId(product_id)})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return {"message": "Product deleted"}
+        raise HTTPException(status_code=404, detail="❌ Product not found")
+    return {"message": "✅ Product deleted"}
