@@ -3,7 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+from fastapi import FastAPI
 
+const cors = require('cors'); 
+app.use(cors( 
+    origins = [
+    "https://red-tree-02e732c0f.4.azurestaticapps.net",  # Twój frontend na Azure
+    "http://localhost:8000"  # Twój backend lokalnie
+]
+)); 
 app = FastAPI()
 
 
