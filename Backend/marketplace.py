@@ -19,6 +19,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+import os
+from pymongo import MongoClient
+
+MONGO_URL = os.getenv("COSMOS_DB_URL")
+
+print(f"🔗 Próba połączenia z MongoDB: {MONGO_URL}")
+
+try:
+    client = MongoClient(MONGO_URL)
+    db = client.marketplace
+    db.command("ping")
+    print("✅ Połączenie z Cosmos DB działa!")
+except Exception as e:
+    print(f"❌ Błąd połączenia z Cosmos DB: {e}")
 
 
 # Pobieranie connection string z GitHub Secrets
